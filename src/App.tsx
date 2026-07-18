@@ -12,6 +12,8 @@ export default function App() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<"dashboard" | "edit" | "report">("dashboard");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSyncingToSheets, setIsSyncingToSheets] = useState(false);
+  const [sheetSyncMessage, setSheetSyncMessage] = useState("");
 
   // Load projects from LocalStorage on initialization
   useEffect(() => {
@@ -131,6 +133,38 @@ export default function App() {
     }
   };
 
+  const handleSyncToGoogleSheets = async () => {
+    const payloadProjects = selectedProject ? [selectedProject] : projects;
+
+    try {
+      setIsSyncingToSheets(true);
+      setSheetSyncMessage("");
+
+      const response = await fetch("/api/google-sheets/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projects: payloadProjects,
+          projectId: selectedProject?.id ?? null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Gagal mengirim data ke Google Sheets.");
+      }
+
+      setSheetSyncMessage(data.message || "Data berhasil disinkronkan ke Google Sheets.");
+    } catch (error: any) {
+      setSheetSyncMessage(error.message || "Gagal mengirim data ke Google Sheets.");
+    } finally {
+      setIsSyncingToSheets(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f5f5f7] font-sans text-[#1d1d1f] antialiased flex flex-col selection:bg-[#0066cc]/20 selection:text-[#0066cc]">
       
@@ -165,10 +199,25 @@ export default function App() {
               </div>
             )}
             <div className="w-px h-5 bg-gray-200"></div>
+            <button
+              onClick={handleSyncToGoogleSheets}
+              disabled={isSyncingToSheets || projects.length === 0}
+              className="rounded-full border border-[#d6e8ff] bg-[#f2f8ff] px-3 py-1.5 text-xs font-semibold text-[#0066cc] transition-all hover:bg-[#e1f0ff] disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSyncingToSheets ? "Menyinkronkan..." : "Google Sheet"}
+            </button>
             <span className="text-[#1d1d1f] font-semibold">Kominfo RI</span>
           </div>
         </div>
       </header>
+
+      {sheetSyncMessage && (
+        <div className={`mx-auto mt-4 max-w-7xl px-4 sm:px-6 lg:px-8 ${sheetSyncMessage.toLowerCase().includes("berhasil") ? "text-green-600" : "text-red-600"}`}>
+          <div className="rounded-xl border border-[#e8e8ed] bg-white px-4 py-3 text-sm shadow-sm">
+            {sheetSyncMessage}
+          </div>
+        </div>
+      )}
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">

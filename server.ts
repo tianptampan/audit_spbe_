@@ -77,6 +77,56 @@ Pastikan respons Anda HANYA berupa JSON valid tanpa markdown block, tanpa penjel
   }
 });
 
+// Endpoint to sync projects to a Google Sheet via a configurable Apps Script webhook
+app.post("/api/google-sheets/sync", async (req, res) => {
+  try {
+    const { projects, projectId } = req.body;
+    const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
+
+    if (!webhookUrl) {
+      return res.status(400).json({
+        error: "Google Sheets webhook belum dikonfigurasi. Setel GOOGLE_SHEETS_WEBHOOK_URL di file .env.",
+      });
+    }
+
+    const payload = {
+      source: "audit_spbe",
+      exportedAt: new Date().toISOString(),
+      projectId: projectId ?? null,
+      projects: Array.isArray(projects) ? projects : [],
+    };
+
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      return res.status(502).json({
+        error: "Gagal mengirim data ke Google Sheets.",
+        details: responseText,
+      });
+    }
+
+    return res.json({
+      message: "Data berhasil disinkronkan ke Google Sheets.",
+      exportedCount: payload.projects.length,
+      response: responseText,
+    });
+  } catch (error: any) {
+    console.error("Error in /api/google-sheets/sync:", error);
+    return res.status(500).json({
+      error: "Gagal menyinkronkan data ke Google Sheets.",
+      details: error.message,
+    });
+  }
+});
+
 // Endpoint to summarize the entire SPBE Audit Project
 app.post("/api/audit/summarize", async (req, res) => {
   try {
