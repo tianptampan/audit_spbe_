@@ -1,0 +1,6 @@
+{
+  "name": "Audit SPBE",
+  "description": "Aplikasi audit Sistem Pemerintahan Berbasis Elektronik (SPBE) yang simpel, intuitif khas Apple dengan bantuan AI asisten.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
